@@ -1,29 +1,26 @@
 <?php
-header("Content-Type: application/json");
+header("Content-Type: application/json; charset=UTF-8");
+require_once "db.php";
 
-// MySQL database connection
-$host = "localhost";
-$dbname = "eventdecoration";
-$user = "root";      // your DB username
-$pass = "";          // your DB password
+/* ---------- READ RAW JSON ---------- */
+$raw = file_get_contents("php://input");
+$data = json_decode($raw, true);
 
-$conn = new mysqli($host, $user, $pass, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die(json_encode([
+/* ---------- VALIDATE JSON ---------- */
+if (!is_array($data)) {
+    echo json_encode([
         "status" => "error",
-        "message" => "Database connection failed"
-    ]));
+        "message" => "Invalid JSON input"
+    ]);
+    exit;
 }
 
-// Get POSTed JSON data
-$data = json_decode(file_get_contents("php://input"), true);
-
+/* ---------- READ INPUT ---------- */
 $username = trim($data["username"] ?? "");
 $password = trim($data["password"] ?? "");
 
-if (empty($username) || empty($password)) {
+/* ---------- VALIDATE INPUT ---------- */
+if ($username === "" || $password === "") {
     echo json_encode([
         "status" => "error",
         "message" => "Username and password are required"
@@ -31,33 +28,48 @@ if (empty($username) || empty($password)) {
     exit;
 }
 
-// Query the admin table
-$stmt = $conn->prepare("SELECT * FROM admins WHERE username = ? LIMIT 1");
+/* ---------- FETCH ADMIN ---------- */
+$stmt = $conn->prepare(
+    "SELECT password FROM admins WHERE username = ? LIMIT 1"
+);
+
+if (!$stmt) {
+    echo json_encode([
+        "status" => "error",
+        "message" => "Query preparation failed"
+    ]);
+    exit;
+}
+
 $stmt->bind_param("s", $username);
 $stmt->execute();
 $result = $stmt->get_result();
 
-if ($result->num_rows > 0) {
-    $admin = $result->fetch_assoc();
-
-    if ($admin["password"] === $password) {  // ✅ In production: use password_verify()
-        echo json_encode([
-            "status" => "success",
-            "message" => "Admin login successful"
-        ]);
-    } else {
-        echo json_encode([
-            "status" => "error",
-            "message" => "Invalid password"
-        ]);
-    }
-} else {
+/* ---------- CHECK USER ---------- */
+if ($result->num_rows === 0) {
     echo json_encode([
         "status" => "error",
-        "message" => "Admin not found"
+        "message" => "Admin login failed"
     ]);
+    exit;
 }
+
+$row = $result->fetch_assoc();
+
+/* ---------- PASSWORD CHECK (PLAIN TEXT) ---------- */
+if (trim($row["password"]) !== $password) {
+    echo json_encode([
+        "status" => "error",
+        "message" => "Admin login failed"
+    ]);
+    exit;
+}
+
+/* ---------- SUCCESS ---------- */
+echo json_encode([
+    "status" => "success",
+    "message" => "Admin login successful"
+]);
 
 $stmt->close();
 $conn->close();
-?>

@@ -1,0 +1,2 @@
+2026-01-16 11:17:46 - Raw Input: {"customer_name":"John Doe","customer_phone":"1234567890","delivery_address":"8XP2+2MF, Challagundla, Andhra Pradesh 522615, India, Challagundla - 522615","end_date":"01/18/2026","equipment_id":8,"quantity":1,"rental_days":2,"start_date":"01/16/2026","time_slot":"Morning (6AM-12PM)","user_id":2}
+2026-01-16 11:17:46 - Parsed User ID: 2

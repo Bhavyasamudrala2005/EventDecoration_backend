@@ -1,5 +1,9 @@
 <?php
 header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST");
+header("Access-Control-Allow-Headers: Content-Type");
+
 include "db.php";
 
 $data = json_decode(file_get_contents("php://input"), true);
@@ -72,17 +76,21 @@ if ($action === 'accept') {
     $stmt->bind_param("i", $booking_id);
     $stmt->execute();
 
-    // Notify user
-    $msg = "Your booking #$booking_id has been ACCEPTED";
+    // Notify user - with proper columns for notifications table
+    $msg = "🎉 Great news! Your booking #$booking_id has been APPROVED. We will start preparing your items.";
+    $notifType = "booking";
+    $notifStatus = "unread";
+    
     $stmt = $conn->prepare(
-        "INSERT INTO notifications (user_id, message) VALUES (?, ?)"
+        "INSERT INTO notifications (user_id, type, message, status) VALUES (?, ?, ?, ?)"
     );
-    $stmt->bind_param("is", $booking['user_id'], $msg);
+    $stmt->bind_param("isss", $booking['user_id'], $notifType, $msg, $notifStatus);
     $stmt->execute();
 
     echo json_encode([
         "status" => "success",
-        "message" => "Booking accepted successfully"
+        "message" => "Booking accepted successfully",
+        "notification_sent" => true
     ]);
     exit;
 }
@@ -96,16 +104,21 @@ if ($action === 'reject') {
     $stmt->bind_param("i", $booking_id);
     $stmt->execute();
 
-    $msg = "Your booking #$booking_id has been REJECTED";
+    // Notify user - with proper columns for notifications table
+    $msg = "We're sorry, your booking #$booking_id has been declined. Please contact support for more information.";
+    $notifType = "booking";
+    $notifStatus = "unread";
+    
     $stmt = $conn->prepare(
-        "INSERT INTO notifications (user_id, message) VALUES (?, ?)"
+        "INSERT INTO notifications (user_id, type, message, status) VALUES (?, ?, ?, ?)"
     );
-    $stmt->bind_param("is", $booking['user_id'], $msg);
+    $stmt->bind_param("isss", $booking['user_id'], $notifType, $msg, $notifStatus);
     $stmt->execute();
 
     echo json_encode([
         "status" => "success",
-        "message" => "Booking rejected successfully"
+        "message" => "Booking rejected successfully",
+        "notification_sent" => true
     ]);
 }
 ?>
